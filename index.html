@@ -382,6 +382,9 @@ function suarakanPanggilan(nomorAntrian, nomorLoket) {
         const utterance = new SpeechSynthesisUtterance(teks);
         const voices = window.speechSynthesis.getVoices();
         const idVoice = voices.find(voice => voice.lang === 'id-ID' || voice.lang.includes('id_ID'));
+        if (idvoice) {
+            utterance.voice = idVoice;
+        } else {
         utterance.lang = 'id-ID'; 
         utterance.rate = 0.9;
         utterance.pitch = 1;
