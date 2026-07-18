@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Antrian Tiket Pesawat - Multi Channel Model</title>
+    <!-- Library Tambahan untuk Fitur Simpan PDF Otomatis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* --- THEME WARNA: PASTEL BLUE & SOFT CREAM --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=1920');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #1e293b;
+        }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .panel {
+            background: rgba(254, 252, 248, 0.92);
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #bfdbfe;
+            box-shadow: 0 4px 20px rgba(30, 41, 59, 0.2);
+            flex: 1;
+            min-width: 380px;
+            backdrop-filter: blur(5px);
+        }
+        .main-title {
+            color: #1e3a8a;
+            text-align: center;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .subtitle-jurnal {
+            color: #475569;
+            font-size: 12px;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+        .title-wrapper { text-align: center; }
+        h3 { color: #2563eb; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 20px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #1e40af; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            color: #334155;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .stepper-wrapper {
+            display: flex;
+            align-items: center;
+            max-width: 180px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        .stepper-btn {
+            width: 45px;
+            height: 40px;
+            background: #f1f5f9;
+            border: none;
+            color: #1e40af;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .stepper-btn:hover { background: #e2e8f0; }
+        .stepper-wrapper input[type="number"] {
+            flex: 1; width: 100%; height: 40px; text-align: center; border: none; border-radius: 0; padding: 0; font-size: 16px; font-weight: bold;
+        }
+        .custom-stepper-wrapper {
+            display: flex; align-items: center; width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; overflow: hidden; height: 44px;
+        }
+        .custom-display {
+            flex: 1; padding: 10px 12px; text-align: left; font-weight: bold; font-size: 14px; color: #334155; background: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .custom-controls {
+            display: flex; flex-direction: column; width: 40px; height: 100%; border-left: 1px solid #cbd5e1; flex-shrink: 0;
+        }
+        .custom-btn {
+            flex: 1; background: #f1f5f9; border: none; color: #1e40af; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; transition: background 0.2s;
+        }
+        .custom-btn:first-child { border-bottom: 1px solid #cbd5e1; }
+        .custom-btn:hover { background: #e2e8f0; }
+        .queue-container { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .queue-box {
+            width: 85px; height: 85px; text-align: center; font-size: 10px; font-weight: bold; border-radius: 10px; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .active-slot { background-color: #93c5fd; color: #1e3a8a; border: 2px solid #2563eb; }
+        .empty-slot { background-color: #f1f5f9; color: #94a3b8; border: 2px dashed #cbd5e1; }
+        button.action-btn {
+            padding: 10px 15px; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; font-size: 13px;
+        }
+        .btn-blue { background-color: #3b82f6; }
+        .btn-blue:hover { background-color: #2563eb; }
+        .btn-orange { background-color: #f97316; }
+        .btn-orange:hover { background-color: #ea580c; }
+        .btn-green { background-color: #10b981; }
+        .btn-green:hover { background-color: #059669; }
+        .btn-red { background-color: #ef4444; }
+        .btn-red:hover { background-color: #dc2626; }
+        hr { border: 0; height: 1px; background: #e2e8f0; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: #ffffff; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #e2e8f0; padding: 11px; text-align: left; }
+        th { background-color: #3b82f6; color: white; font-weight: 600; }
+        tr:hover { background-color: #f8fafc; }
+        .radio-td { text-align: center; width: 40px; }
+        .radio-td input { cursor: pointer; transform: scale(1.2); }
+        .badge { background: #f97316; color: white; padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+        #statusUser { background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .channels-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .channel-card { background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+        .channel-card.busy { border-color: #f59e0b; background: #fffbeb; }
+        .channel-title { font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px; background: #eff6ff; padding: 3px; border-radius: 6px; }
+        .channel-status { font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+        .status-idle { color: #10b981; }
+        .status-busy { color: #d97706; }
+        #toastNotification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; color: white; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 9999; display: none; font-size: 14px; transition: all 0.3s ease; }
+        .timer-text { font-size: 11px; font-weight: bold; color: #b45309; background: #fef3c7; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+        .notepad-container { background: #fffdf0; border: 1px solid #eab308; border-left: 6px solid #eab308; border-radius: 8px; padding: 15px; font-size: 12px; line-height: 1.5; color: #2c3e50; max-height: 250px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; }
+    </style>
+</head>
+<body>
+<div class="title-wrapper">
+    <h2 class="main-title">✈️ Sistem Antrian Pemesanan Tiket Pesawat</h2>
+    <div class="subtitle-jurnal">Implementasi Multiple Channel Model (M/M/s) Berbasis Web Berdasarkan Referensi Jurnal Meryuni & M. Siddik (2020)</div>
+</div>
+<div id="toastNotification"></div>
+<div class="container">
+    <div class="panel">
+        <h3>1. Pemesanan Tiket Pesawat</h3>
+        <div class="form-group">
+            <label>Nama Penumpang:</label>
+            <input type="text" id="namaPenumpang" placeholder="Masukkan Nama Lengkap sesuai KTP">
+        </div>
+        <div class="form-group">
+            <label>Jumlah Tiket:</label>
+            <div class="stepper-wrapper">
+                <button type="button" class="stepper-btn" onclick="kurangTiket()">-</button>
+                <input type="number" id="jumlahTiket" value="1" min="1">
+                <button type="button" class="stepper-btn" onclick="tambahTiket()">+</button>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1; min-width: 0;">
+                <label>Kota Asal:</label>
+                <div class="custom-stepper-wrapper">
+                    <div class="custom-display" id="displayKotaAsal">Pontianak (PNK)</div>
+                    <div class="custom-controls">
+                        <button type="button" class="custom-btn" onclick="pindahKotaAsal('atas')">🔼</button>
+                        <button type="button" class="custom-btn" onclick="pindahKotaAsal('bawah')">🔽</button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 0;">
+                <label>Kota Tujuan:</label>
+                <div class="custom-stepper-wrapper">
+                    <div class="custom-display" id="displayKotaTujuan">Kapuas Hulu (PSU)</div>
+                    <div class="custom-controls">
+                        <button type="button" class="custom-btn" onclick="pindahKotaTujuan('atas')">🔼</button>
+                        <button type="button" class="custom-btn" onclick="pindahKotaTujuan('bawah')">🔽</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Kelas Penerbangan:</label>
+            <div class="custom-stepper-wrapper">
+                <div class="custom-display" id="displayKelas">Economy Class (Ekonomi) - Rp 800.000</div>
+                <div class="custom-controls">
+                    <button type="button" class="custom-btn" onclick="pindahKelas('atas')">🔼</button>
+                    <button type="button" class="custom-btn" onclick="pindahKelas('bawah')">🔽</button>
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label>Tanggal Pergi:</label>
+                <input type="date" id="tanggalPergi">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Tanggal Pulang:</label>
+                <input type="date" id="tanggalPulang">
+            </div>
+        </div>
+        <hr>
+        <p style="margin-bottom: 5px; font-weight: bold;">📋 Jadwal Penerbangan Hari <span class="badge" id="labelHari">Minggu</span> :</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Maskapai</th>
+                    <th>Jam Berangkat</th>
+                    <th>Jam Tiba</th>
+                    <th>Pilih</th>
+                </tr>
+            </thead>
+            <tbody id="tabelJadwal"></tbody>
+        </table>
+        <br>
+        <button id="btnDaftar" class="action-btn btn-blue">Ambil Nomor Antrian Tiket</button>
+        <hr>
+        <h3>2. Status Antrian Anda</h3>
+        <div id="statusUser">
+            <p style="color: #7f8c8d; margin: 0;">Silakan tentukan rute dan pilih jadwal terbang Anda.</p>
+        </div>
+    </div>
+    <div class="panel">
+        <div style="background: #eff6ff; padding: 12px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #3b82f6;">
+            <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">⚙️ Pengaturan Kapasitas Struktur Data</h4>
+            <div class="form-group" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <label style="margin: 0; white-space: nowrap;">Jumlah Slot Antrean:</label>
+                <input type="number" id="inputKapasitas" value="5" min="2" max="20" style="width: 70px; text-align: center; padding: 4px;">
+            </div>
+        </div>
+        <h3>3. Loket Pelayanan Aktif (Multiple Channel Model)</h3>
+        <div class="channels-grid">
+            <div class="channel-card" id="card-loket1">
+                <div class="channel-title">LOKET 1</div>
+                <div class="channel-status status-idle" id="status-loket1">🟢 KOSONG (IDLE)</div>
+                <div id="detail-loket1" style="font-size: 11px; color:#64748b;">Menunggu...</div>
+                <button class="action-btn btn-green" style="font-size:11px; padding:4px; width:auto;" onclick="selesaiLayanan(1)">Selesai</button>
+            </div>
+            <div class="channel-card" id="card-loket2">
+                <div class="channel-title">LOKET 2</div>
+                <div class="channel-status status-idle" id="status-loket2">🟢 KOSONG (IDLE)</div>
+                <div id="detail-loket2" style="font-size: 11px; color:#64748b;">Menunggu...</div>
+                <button class="action-btn btn-green" style="font-size:11px; padding:4px; width:auto;" onclick="selesaiLayanan(2)">Selesai</button>
+            </div>
+            <div class="channel-card" id="card-loket3">
+                <div class="channel-title">LOKET 3</div>
+                <div class="channel-status status-idle" id="status-loket3">🟢 KOSONG (IDLE)</div>
+                <div id="detail-loket3" style="font-size: 11px; color:#64748b;">Menunggu...</div>
+                <button class="action-btn btn-green" style="font-size:11px; padding:4px; width:auto;" onclick="selesaiLayanan(3)">Selesai</button>
+            </div>
+        </div>
+        <button id="btnProsesAuto" class="action-btn btn-orange">Panggil Antrian Terdepan (Masukkan ke Loket Kosong)</button>
+        <button id="btnResetHarian" class="action-btn btn-red" style="margin-top: 10px;">🗑️ Hapus Seluruh Antrean Harian (Reset)</button>
+        <hr>
+        <h3>Visualisasi Struktur Data (Circular Queue)</h3>
+        <div id="visualisasiQueue" class="queue-container"></div>
+        <p style="font-size:12px;"><strong>Front Index:</strong> <span id="txtFront" style="color:#2563eb;">-1</span> | <strong>Rear Index:</strong> <span id="txtRear" style="color:#2563eb;">-1</span></p>
+        <hr>
+        <h3>📜 Notepad: Riwayat Selesai Layanan</h3>
+        <div class="notepad-container" id="notepadLog">=== BELUM ADA TRANSAKSI ===</div>
+        <p style="font-weight: bold; font-size:14px; margin-top:10px; color:#16a34a;">💰 Total Pendapatan Hari Ini: <span id="txtTotalPendapatan">Rp 0</span></p>
+    </div>
+</div>
+<script>
+let kapasitas = parseInt(document.getElementById('inputKapasitas').value);
+let queue = new Array(kapasitas).fill(null);
+let front = -1;
+let rear = -1;
+let nomorAntrianGlobal = 1;
+let totalPendapatanGlobal = 0;
+const listKota = ["Pontianak (PNK)", "Ketapang (KTG)", "Sintang (SQG)", "Singkawang (SKJ)", "Kapuas Hulu (PSU)"];
+let indeksKotaAsal = 0;
+let indeksKotaTujuan = 4;
+const listKelas = [
+    { nama: "Economy Class (Ekonomi)", harga: 800000, label: "Economy Class (Ekonomi) - Rp 800.000" },
+    { nama: "Business Class (Bisnis)", harga: 2500000, label: "Business Class (Bisnis) - Rp 2.500.000" }
+];
+let indeksKelasAktif = 0;
+let loketChannels = {
+    1: { busy: false, data: null, timer: null, detik: 2700 },
+    2: { busy: false, data: null, timer: null, detik: 2700 },
+    3: { busy: false, data: null, timer: null, detik: 2700 }
+};
+const databaseJadwal = {
+    "Senin": [
+        { maskapai: "Garuda Indonesia", berangkat: "07:30 WIB", tiba: "09:00 WIB" }, 
+        { maskapai: "Lion Air", berangkat: "11:15 WIB", tiba: "12:45 WIB" }, 
+        { maskapai: "Citilink", berangkat: "16:00 WIB", tiba: "17:30 WIB" }
+    ],
+    "Selasa": [
+        { maskapai: "Super Air Jet", berangkat: "08:00 WIB", tiba: "09:20 WIB" }, 
+        { maskapai: "Wings Air", berangkat: "13:00 WIB", tiba: "14:45 WIB" }
+    ],
+    "Rabu": [
+        { maskapai: "Super Air Jet", berangkat: "14:00 WIB", tiba: "15:15 WIB" }, 
+        { maskapai: "Garuda Indonesia", berangkat: "18:30 WIB", tiba: "20:00 WIB" }, 
+        { maskapai: "Lion Air", berangkat: "20:45 WIB", tiba: "22:15 WIB" }
+    ],
+    "Kamis": [
+        { maskapai: "Citilink", berangkat: "06:15 WIB", tiba: "07:45 WIB" }, 
+        { maskapai: "Super Air Jet", berangkat: "10:30 WIB", tiba: "11:55 WIB" }
+    ],
+    "Jumat": [
+        { maskapai: "Garuda Indonesia", berangkat: "09:00 WIB", tiba: "10:30 WIB" }, 
+        { maskapai: "Lion Air", berangkat: "13:15 WIB", tiba: "14:45 WIB" }, 
+        { maskapai: "Citilink", berangkat: "19:00 WIB", tiba: "20:30 WIB" }
+    ],
+    "Sabtu": [
+        { maskapai: "Super Air Jet", berangkat: "12:00 WIB", tiba: "13:20 WIB" }, 
+        { maskapai: "Wings Air", berangkat: "15:30 WIB", tiba: "17:10 WIB" }
+    ],
+    "Minggu": [
+        { maskapai: "Garuda Indonesia", berangkat: "10:00 WIB", tiba: "11:30 WIB" }, 
+        { maskapai: "Lion Air", berangkat: "17:15 WIB", tiba: "18:45 WIB" }
+    ]
+};
+
+const inputKapasitas = document.getElementById('inputKapasitas');
+const visualisasiQueue = document.getElementById('visualisasiQueue');
+const txtFront = document.getElementById('txtFront');
+const txtRear = document.getElementById('txtRear');
+const statusUser = document.getElementById('statusUser');
+const toast = document.getElementById('toastNotification');
+const labelHari = document.getElementById('labelHari');
+const tanggalPergiInput = document.getElementById('tanggalPergi');
+const tanggalPulangInput = document.getElementById('tanggalPulang');
+const inputNama = document.getElementById('namaPenumpang');
+const inputTiket = document.getElementById('jumlahTiket');
+const displayKelas = document.getElementById('displayKelas');
+const displayKotaAsal = document.getElementById('displayKotaAsal');
+const displayKotaTujuan = document.getElementById('displayKotaTujuan');
+const tabelJadwal = document.getElementById('tabelJadwal');
+const notepadLog = document.getElementById('notepadLog');
+const txtTotalPendapatan = document.getElementById('txtTotalPendapatan');
+
+function pindahKotaAsal(arah) {
+    if (arah === 'atas') { indeksKotaAsal--; if (indeksKotaAsal < 0) indeksKotaAsal = listKota.length - 1; }
+    else if (arah === 'bawah') { indeksKotaAsal++; if (indeksKotaAsal >= listKota.length) indeksKotaAsal = 0; }
+    displayKotaAsal.innerText = listKota[indeksKotaAsal];
+    updateTabelJadwalOtomatis(); 
+}
+
+function pindahKotaTujuan(arah) {
+    if (arah === 'atas') { indeksKotaTujuan--; if (indeksKotaTujuan < 0) indeksKotaTujuan = listKota.length - 1; }
+    else if (arah === 'bawah') { indeksKotaTujuan++; if (indeksKotaTujuan >= listKota.length) indeksKotaTujuan = 0; }
+    displayKotaTujuan.innerText = listKota[indeksKotaTujuan];
+    updateTabelJadwalOtomatis();
+}
+
+function pindahKelas(arah) {
+    if (arah === 'atas') { indeksKelasAktif--; if (indeksKelasAktif < 0) indeksKelasAktif = listKelas.length - 1; }
+    else if (arah === 'bawah') { indeksKelasAktif++; if (indeksKelasAktif >= listKelas.length) indeksKelasAktif = 0; }
+    displayKelas.innerText = listKelas[indeksKelasAktif].label;
+}
+
+function tambahTiket() { let val = parseInt(inputTiket.value); if (isNaN(val) || val < 1) val = 0; inputTiket.value = val + 1; }
+function kurangTiket() { let val = parseInt(inputTiket.value); if (isNaN(val) || val <= 1) inputTiket.value = 1; else inputTiket.value = val - 1; }
+
+function showNotification(message, type = 'success') {
+    toast.innerText = message;
+    if (type === 'success') toast.style.backgroundColor = '#10b981';
+    else if (type === 'warning') toast.style.backgroundColor = '#f59e0b';
+    else if (type === 'danger') toast.style.backgroundColor = '#ef4444';
+    else if (type === 'info') toast.style.backgroundColor = '#3b82f6';
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3500);
+}
+
+function suarakanPanggilan(nomorAntrian, nomorLoket) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const teks = `Nomor antrean Q ${nomorAntrian}, silakan menuju ke loket ${nomorLoket}`;
+        const utterance = new SpeechSynthesisUtterance(teks);
+        utterance.lang = 'id-ID'; utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+function updateTabelJadwalOtomatis() {
+    if (indeksKotaAsal === indeksKotaTujuan) {
+        tabelJadwal.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ef4444; font-weight:bold; padding: 20px;">⚠️ Rute tidak tersedia: Kota asal dan tujuan tidak boleh sama.</td></tr>`;
+        return;
+    }
+    let tanggalValue = tanggalPergiInput.value || tanggalPulangInput.value;
+    if (!tanggalValue) return;
+    const dateObj = new Date(tanggalValue);
+    const daftarHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const hariTerpilih = daftarHari[dateObj.getDay()];
+    labelHari.innerText = hariTerpilih;
+
+    const sekarang = new Date();
+    const formatHariIni = `${sekarang.getFullYear()}-${String(sekarang.getMonth() + 1).padStart(2, '0')}-${String(sekarang.getDate()).padStart(2, '0')}`;
+    const jamSekarang = sekarang.getHours();
+    const menitSekarang = sekarang.getMinutes();
+
+    tabelJadwal.innerHTML = "";
+    const listJadwal = databaseJadwal[hariTerpilih] || [];
+    if (listJadwal.length === 0) {
+        tabelJadwal.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">Tidak ada jadwal penerbangan hari ini.</td></tr>`;
+        return;
+    }
+    listJadwal.forEach((item, index) => {
+        const bagianWaktu = item.berangkat.replace(' WIB', '').split(':');
+        const jamPenerbangan = parseInt(bagianWaktu);
+        const menitPenerbangan = parseInt(bagianWaktu[1]);
+        let isLewat = (tanggalValue === formatHariIni) && (jamSekarang > jamPenerbangan || (jamSekarang === jamPenerbangan && menitSekarang >= menitPenerbangan));
+        
+        const tr = document.createElement('tr');
+        if (isLewat) tr.style = "background-color: #f8fafc; color: #94a3b8;";
+        tr.innerHTML = `
+            <td><strong ${isLewat ? 'style="color: #94a3b8;"' : ''}>${item.maskapai}</strong><br>
+            <small style="color: ${isLewat ? '#ef4444' : '#10b981'}; font-weight: bold;">${isLewat ? '❌ Jam Terbang Sudah Lewat' : '🟢 Tersedia'}</small></td>
+            <td>${item.berangkat}</td><td>${item.tiba}</td>
+            <td class="radio-td"><input type="radio" name="pilihanJadwal" value="${item.maskapai}" data-berangkat="${item.berangkat}" data-tiba="${item.tiba}" ${isLewat ? 'disabled style="cursor: not-allowed; opacity: 0.4;"' : (index === 0 ? 'checked' : '')}></td>
+        `;
+        tabelJadwal.appendChild(tr);
+    });
+}
+
+tanggalPergiInput.addEventListener('change', updateTabelJadwalOtomatis);
+tanggalPulangInput.addEventListener('change', updateTabelJadwalOtomatis);
+
+function updateVisualisasi() {
+    visualisasiQueue.innerHTML = '';
+    for (let i = 0; i < kapasitas; i++) {
+        const box = document.createElement('div');
+        box.className = 'queue-box ' + (queue[i] ? 'active-slot' : 'empty-slot');
+        box.innerHTML = queue[i] ? `<div>Q-${queue[i].nomor}</div><div style="font-size:8px; white-space:nowrap; overflow:hidden; width:70px;">${queue[i].nama}</div>` : `<div style="color:#cbd5e1;">[Kosong]</div>`;
+        const idxDiv = document.createElement('div'); idxDiv.style = "margin-top:auto; font-size:9px; font-weight:normal; color:#94a3b8;"; idxDiv.innerText = `Idx: ${i}`;
+        box.appendChild(idxDiv); visualisasiQueue.appendChild(box);
+    }
+    txtFront.innerText = front; txtRear.innerText = rear;
+}
+
+inputKapasitas.addEventListener('change', () => { kapasitas = parseInt(inputKapasitas.value); queue = new Array(kapasitas).fill(null); front = -1; rear = -1; updateVisualisasi(); });
+
+document.getElementById('btnDaftar').addEventListener('click', () => {
+    const nama = inputNama.value.trim();
+    let jumlah = parseInt(inputTiket.value);
+    const asal = listKota[indeksKotaAsal]; 
+    const tujuan = listKota[indeksKotaTujuan];
+    const harga = listKelas[indeksKelasAktif].harga;
+    const pilihanJadwal = document.querySelector('input[name="pilihanJadwal"]:checked');
+    
+    if (!nama) { showNotification('⚠️ Harap isi nama!', 'warning'); inputNama.focus(); return; }
+    if (asal === tujuan) { showNotification('⚠️ Rute Tidak Valid!', 'warning'); return; }
+    if (!pilihanJadwal) { showNotification('⚠️ Pilih maskapai!', 'warning'); return; }
+    if ((front === 0 && rear === kapasitas - 1) || (rear === (front - 1) % (kapasitas - 1))) { showNotification('🛑 Antrean Penuh!', 'danger'); return; }
+
+    const dataPelanggan = {
+        nomor: nomorAntrianGlobal++, 
+        nama,
+        tiket: jumlah, 
+        rute: `${asal} -> ${tujuan}`, 
+        maskapai: pilihanJadwal.value,
+        jamBerangkat: pilihanJadwal.getAttribute('data-berangkat'), 
+        jamTiba: pilihanJadwal.getAttribute('data-tiba'),
+        hargaSatuan: harga, 
+        totalHarga: harga * jumlah, 
+        totalFormat: 'Rp ' + (harga * jumlah).toLocaleString('id-ID')
+    };
+
+    if (front === -1) { front = 0; rear = 0; } else { rear = (rear + 1) % kapasitas; }
+    queue[rear] = dataPelanggan;
+    statusUser.innerHTML = `<div style="background: #f8fafc; border: 2px dashed #3b82f6; border-radius: 10px; padding: 15px; text-align: center;"><div style="font-size: 24px; font-weight: 900; color: #1e3a8a;">Q-${dataPelanggan.nomor}</div><p style="color:#10b981; margin:2px; font-weight: bold;">🟢 STATUS: DALAM ANTRIAN</p><small>Nama: ${dataPelanggan.nama} (${dataPelanggan.maskapai})</small></div>`;
+    showNotification(`✅ Sukses mendaftarkan Q-${dataPelanggan.nomor}`, 'success');
+    inputNama.value = ''; updateVisualisasi();
+});
+
+document.getElementById('btnProsesAuto').addEventListener('click', () => {
+    if (front === -1) { showNotification('ℹ️ Antrean kosong!', 'info'); return; }
+    let loketTerpilih = null;
+    for (let id in loketChannels) { if (!loketChannels[id].busy) { loketTerpilih = id; break; } }
+    if (!loketTerpilih) { showNotification('⚠️ Loket Penuh!', 'warning'); return; }
+    prosesPemasukanKeLoket(loketTerpilih);
+});
+
+function prosesPemasukanKeLoket(loketId) {
+    const dataPelanggan = queue[front]; queue[front] = null;
+    if (front === rear) { front = -1; rear = -1; } else { front = (front + 1) % kapasitas; }
+    loketChannels[loketId].busy = true; loketChannels[loketId].data = dataPelanggan; loketChannels[loketId].detik = 2700;
+    renderLoketCard(loketId); startLoketTimer(loketId); suarakanPanggilan(dataPelanggan.nomor, loketId);
+    showNotification(`📢 Q-${dataPelanggan.nomor} ke Loket ${loketId}`, 'success'); updateVisualisasi();
+}
+
+function selesaiLayanan(id) {
+    if (!loketChannels[id].busy) return;
+    const pelangganSelesai = loketChannels[id].data;
+    clearInterval(loketChannels[id].timer);
+    
+    const waktuSelesai = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    
+    // 1. Logika Teks Notepad (Tetap dipertahankan sesuai sumber asli)
+    const notaTeks = `[SUKSES LOKET ${id} - SELESAI PADA ${waktuSelesai} WIB]
+--------------------------------------------------
+No Antrean          : Q-${pelangganSelesai.nomor}
+Nama                : ${pelangganSelesai.nama}
+Maskapai            : ${pelangganSelesai.maskapai}
+Rute Perjalanan     : ${pelangganSelesai.rute}
+Jadwal Pernerbangan : ${pelangganSelesai.jamBerangkat} - ${pelangganSelesai.jamTiba}
+Jumlah Pesanan      : ${pelangganSelesai.tiket}
+--------------------------------------------------\n\n`;
+
+    // 2. DESAIN STRUK PDF PREMIUM
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // --- Header Berwarna (Biru Gelap) ---
+    doc.setFillColor(30, 58, 138); // Warna #1e3a8a dari style asli Anda
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("E-TICKET & RECEIPT", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Sistem Pemesanan Tiket Pesawat - Multi Channel Model", 105, 28, { align: "center" });
+
+    // --- Kotak Utama (Border) ---
+    doc.setDrawColor(203, 213, 225); // Warna abu-abu muda
+    doc.rect(10, 50, 190, 105); 
+
+    // --- Label Nomor Antrean (Badge Look) ---
+    doc.setFillColor(249, 115, 22); // Warna orange badge #f97316
+    doc.roundedRect(150, 55, 40, 15, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.text(`Q-${pelangganSelesai.nomor}`, 170, 65, { align: "center" });
+
+    // --- Data Penumpang ---
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("INFORMASI PENUMPANG", 15, 62);
+    doc.line(15, 64, 80, 64);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Nama Pelanggan  : ${pelangganSelesai.nama.toUpperCase()}`, 15, 75);
+    doc.text(`Loket Pelayanan : Loket ${id}`, 15, 82);
+    doc.text(`Waktu Transaksi : ${waktuSelesai} WIB`, 15, 89);
+
+    // --- Data Penerbangan (Layout Kolom) ---
+    doc.setFillColor(241, 245, 249); // Latar abu-abu sangat muda
+    doc.rect(15, 100, 180, 40, 'F');
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("DETAIL PENERBANGAN", 20, 110);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Maskapai         : ${pelangganSelesai.maskapai}`, 20, 118);
+    doc.text(`Rute Perjalanan  : ${pelangganSelesai.rute}`, 20, 126);
+    doc.text(`Jadwal Terbang   : ${pelangganSelesai.jamBerangkat} - ${pelangganSelesai.jamTiba}`, 20, 134);
+    doc.text(`Jumlah Pesanan   : ${pelangganSelesai.tiket} Orang`, 20, 142); // Menampilkan jumlah tiket
+    // --- Total Bayar ---
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(22, 163, 74); // Warna hijau sukses
+    doc.text(`TOTAL BAYAR: ${pelangganSelesai.totalFormat}`, 105, 170, { align: "center" });
+
+    // --- Footer / Simulasi Barcode ---
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+    // Membuat garis-garis menyerupai barcode sederhana
+    for(let i=0; i<40; i+=2) { doc.line(85+i, 180, 85+i, 195); }
+    
+    doc.setTextColor(100);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "italic");
+    doc.text("Terima kasih telah melakukan pemesanan melalui sistem kami.", 105, 200, { align: "center" });
+    doc.text("Simpan bukti ini untuk keperluan check-in di bandara.", 105, 205, { align: "center" });
+
+    // Simpan PDF Otomatis
+    doc.save(`Tiket_Q${pelangganSelesai.nomor}_${pelangganSelesai.nama.replace(/\s+/g, '_')}.pdf`);
+
+    // 3. Update Notepad & Pendapatan (Berdasarkan sumber [1, 2])
+    notepadLog.innerText = notaTeks + notepadLog.innerText;
+    totalPendapatanGlobal += pelangganSelesai.totalHarga;
+    txtTotalPendapatan.innerText = 'Rp ' + totalPendapatanGlobal.toLocaleString('id-ID');
+    
+    // Reset Loket
+    loketChannels[id].busy = false;
+    loketChannels[id].data = null;
+    showNotification(`✅ Layanan Selesai. Tiket Q-${pelangganSelesai.nomor} telah diunduh.`, 'success');
+    
+    if (front !== -1) {
+        prosesPemasukanKeLoket(id);
+    } else {
+        renderLoketCard(id);
+    }
+}
+
+function renderLoketCard(id) {
+    const card = document.getElementById(`card-loket${id}`), statusLabel = document.getElementById(`status-loket${id}`), detailLabel = document.getElementById(`detail-loket${id}`);
+    const channel = loketChannels[id];
+    if (channel.busy) {
+        card.className = "channel-card busy"; statusLabel.className = "channel-status status-busy"; statusLabel.innerText = `🔴 SIBUK (SERVING)`;
+        detailLabel.innerHTML = `<strong>Q-${channel.data.nomor}</strong> - ${channel.data.nama}<br><small>${channel.data.maskapai}</small><br><span id="timer-text-${id}" class="timer-text">⏳ 45:00</span>`;
+    } else {
+        card.className = "channel-card"; statusLabel.className = "channel-status status-idle"; statusLabel.innerText = `🟢 KOSONG (IDLE)`; detailLabel.innerText = "Menunggu...";
+    }
+}
+
+function startLoketTimer(id) {
+    if (loketChannels[id].timer) clearInterval(loketChannels[id].timer);
+    loketChannels[id].timer = setInterval(() => {
+        loketChannels[id].detik--;
+        const timerSpan = document.getElementById(`timer-text-${id}`);
+        if (loketChannels[id].detik <= 0) { clearInterval(loketChannels[id].timer); if (timerSpan) timerSpan.innerText = "🛑 Habis!"; return; }
+        if (timerSpan) { let m = Math.floor(loketChannels[id].detik / 60), s = loketChannels[id].detik % 60; timerSpan.innerText = `⏳ ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`; }
+    }, 1000);
+}
+
+document.getElementById('btnResetHarian').addEventListener('click', () => {
+    queue = new Array(kapasitas).fill(null); front = -1; rear = -1; nomorAntrianGlobal = 1; totalPendapatanGlobal = 0;
+    for (let id in loketChannels) { if (loketChannels[id].timer) clearInterval(loketChannels[id].timer); loketChannels[id].busy = false; loketChannels[id].data = null; renderLoketCard(id); }
+    statusUser.innerHTML = `<p style="color: #7f8c8d; margin: 0;">Silakan tentukan rute dan pilih jadwal terbang Anda.</p>`;
+    notepadLog.innerText = "=== BELUM ADA TRANSAKSI ==="; txtTotalPendapatan.innerText = "Rp 0";
+    updateVisualisasi(); showNotification("🗑️ Data Reset Berhasil.", 'danger');
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    const hariIni = new Date();
+    tanggalPergiInput.value = `${hariIni.getFullYear()}-${String(hariIni.getMonth() + 1).padStart(2, '0')}-${String(hariIni.getDate()).padStart(2, '0')}`;
+    updateTabelJadwalOtomatis(); updateVisualisasi();
+});
+</script>
+</body>
+</html>
