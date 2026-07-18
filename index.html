@@ -380,7 +380,9 @@ function suarakanPanggilan(nomorAntrian, nomorLoket) {
         window.speechSynthesis.cancel();
         const teks = `Nomor antrean Q ${nomorAntrian}, silakan menuju ke loket ${nomorLoket}`;
         const utterance = new SpeechSynthesisUtterance(teks);
-        utterance.lang = 'id-ID'; utterance.rate = 0.9;
+        utterance.lang = 'id-ID'; 
+        utterance.rate = 0.9;
+        utterance.volume = 1;
         window.speechSynthesis.speak(utterance);
     }
 }
